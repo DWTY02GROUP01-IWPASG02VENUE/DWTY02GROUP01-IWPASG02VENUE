@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Venue Booking System</title>
+
+
+  <style>
+
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    header, footer { background: #333; color: white; padding: 1rem; text-align: center; }
+    nav a { margin: 0 10px; color: white; text-decoration: none; }
+    input, select, button, textarea { display: block; width: 100%; margin: 10px 0; padding: 10px; }
+
+
+    .container { max-width: 1000px; margin: auto; padding: 1rem; }
+    .card { background: white; padding: 1rem; margin: 1rem 0; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .hidden { display: none; }
+    .venue-card { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; }
+
+
+  </style>
+
+</head>
+
+<body>
+
+  <header>
+
+    <h1>Venue Booking System</h1>
+    <nav id="navLinks">
+      <a href="#" onclick="showPage('login')">Login</a>
+      <a href="#" onclick="showPage('register')">Register</a>
+    </nav>
+
+  </header>
+<div class="container">
+
+    <!-- Login Page -->
+
+    <div id="login" class="card">
+      <h2>Login</h2>
+      <input type="email" id="loginEmail" placeholder="Email" required>
+      <input type="password" id="loginPassword" placeholder="Password" required>
+      <button onclick="login()">Login</button>
+    </div>
+
+    <!-- Register Page -->
+
+    <div id="register" class="card hidden">
+      <h2>Register</h2>
+      <input type="text" id="registerName" placeholder="Name">
+      <input type="email" id="registerEmail" placeholder="Email">
+      <input type="password" id="registerPassword" placeholder="Password">
+      <button onclick="register()">Register</button>
+    </div>
+
+    <!-- Customer Dashboard -->
+
+    <div id="customerDashboard" class="card hidden">
+      <h2>Customer Dashboard</h2>
+      <button onclick="logout()">Logout</button>
+
+      <div>
+        <h3>Search Venues</h3>
+        <div id="locationList">
+          <p><strong>Available Locations:</strong> Gadong, Sengkurong, Bandar</p>
+        </div>
+
+        <input type="text" id="searchVenue" placeholder="Search by location">
+        <button onclick="searchVenues()">Search</button>
+        <div id="venueList"></div>
+
+      </div>
+      <div>
+        <h3>Your Bookings</h3>
+        <div id="bookingList"></div>
+      </div>
+    </div>
+
+    <!-- Owner Dashboard -->
+
+    <div id="ownerDashboard" class="card hidden">
+      <h2>Owner Dashboard</h2>
+      <button onclick="logout()">Logout</button>
+      <h3>Add Venue</h3>
+      <input type="text" id="venueName" placeholder="Venue Name">
+      <input type="text" id="venueLocation" placeholder="Location">
+      <input type="number" id="venuePrice" placeholder="Price">
+      <textarea id="venueDescription" placeholder="Description"></textarea>
+      <button onclick="addVenue()">Add Venue</button>
+
+      <div>
+        <h3>Your Venues</h3>
+        <div id="ownerVenueList"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2025 Venue Booking System
+  </footer>
+
+<script>
+
+
+//Owner data and Initial Venues
+const OWNER_EMAIL = 'owner123@gmail.com';
+const OWNER_PASSWORD = 'owner123';
+const INITIAL_VENUES = [
+  { name: "Wedding Hall", location: "Gadong", price: 900, description: "Spacious wedding hall, beautifully decorated." },
+  { name: "Community Centre", location: "Sengkurong", price: 700, description: "Perfect for community events and meetings." },
+  { name: "Food Centre", location: "Bandar", price: 850, description: "Ideal for food fairs and culinary events." }
+];
+
+
+// to switch between different pages (login, register, dashboards)
+function showPage(pageId) {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('register').classList.add('hidden');
+  document.getElementById('customerDashboard').classList.add('hidden');
+  document.getElementById('ownerDashboard').classList.add('hidden');
+  document.getElementById(pageId).classList.remove('hidden');
+}
+
+
+// to update navigation bar after login
+function updateNav(name) {
+  document.getElementById('navLinks').innerHTML = 
+    `<span>Welcome, ${name}</span> | <a href="#" onclick="logout()">Logout</a>`;
+}
+
+
+// to handle user registration
+function register() {
+  const name = document.getElementById('registerName').value;
+  const email = document.getElementById('registerEmail').value;
+  const password = document.getElementById('registerPassword').value;
+  
+
+  // Prevent registering using the owner's email
+  if (email === OWNER_EMAIL) {
+    alert("This email is reserved for the owner.");
+    return;
+  }
+  
+  // Save new customer to localStorage
+  const user = { name, email, password, type: 'customer', bookings: [] };
+  localStorage.setItem(email, JSON.stringify(user));
+  alert('Registered successfully.');
+  showPage('login');
+}
+
+// to handle login
+function login() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  
+  // for owner login
+  if (email === OWNER_EMAIL && password === OWNER_PASSWORD) {
+    if (!localStorage.getItem(OWNER_EMAIL)) {
+      // Save owner's data if not already saved
+      const ownerData = { name: 'Owner', email: OWNER_EMAIL, password: OWNER_PASSWORD, type: 'owner', venues: INITIAL_VENUES };
+      localStorage.setItem(OWNER_EMAIL, JSON.stringify(ownerData));
+    }
+    localStorage.setItem('currentUser', OWNER_EMAIL);
+    updateNav('Owner');
+    loadOwnerDashboard();
+    showPage('ownerDashboard');
+    return;
+  }
+  
+  // customer login
+  const user = JSON.parse(localStorage.getItem(email));
+  
+  if (user && user.password === password) {
+    localStorage.setItem('currentUser', email);
+    updateNav(user.name);
+    loadCustomerDashboard();
+    showPage('customerDashboard');
+  } else {
+    alert('User not found. Please register.');
+  }
+}
+
+// to handle logout
+function logout() {
+  localStorage.removeItem('currentUser');
+  document.getElementById('navLinks').innerHTML = `
+    <a href="#" onclick="showPage('login')">Login</a>
+    <a href="#" onclick="showPage('register')">Register</a>`;
+  showPage('login');
+}
+
+// to load venues into the Owner Dashboard
+function loadOwnerDashboard() {
+  const owner = JSON.parse(localStorage.getItem(OWNER_EMAIL));
+  const venueList = document.getElementById('ownerVenueList');
+  
+  // Display each venue with edit and delete buttons
+  venueList.innerHTML = owner.venues.map((venue, index) => `
+    <div class="venue-card">
+      <strong>${venue.name}</strong><br>${venue.description}<br>
+      Location: ${venue.location}<br>Price: ${venue.price}<br>
+      <button onclick="editVenue(${index})">Edit</button>
+      <button onclick="deleteVenue(${index})">Delete</button>
+    </div>
+  `).join('');
+}
+
+// to add a new venue (Owner)
+function addVenue() {
+  const name = document.getElementById('venueName').value;
+  const location = document.getElementById('venueLocation').value;
+  const price = document.getElementById('venuePrice').value;
+  const description = document.getElementById('venueDescription').value;
+  
+  const owner = JSON.parse(localStorage.getItem(OWNER_EMAIL));
+  owner.venues.push({ name, location, price, description });
+  localStorage.setItem(OWNER_EMAIL, JSON.stringify(owner));
+  
+  loadOwnerDashboard();
+  
+  // Clear input venue
+  document.getElementById('venueName').value = '';
+  document.getElementById('venueLocation').value = '';
+  document.getElementById('venuePrice').value = '';
+  document.getElementById('venueDescription').value = '';
+}
+
+// to edit existing venue (Owner)
+function editVenue(index) {
+  const owner = JSON.parse(localStorage.getItem(OWNER_EMAIL));
+  const venue = owner.venues[index];
+  
+  // Prompt user to edit venue
+  venue.name = prompt('Edit venue name:', venue.name) || venue.name;
+  venue.location = prompt('Edit location:', venue.location) || venue.location;
+  venue.price = prompt('Edit price:', venue.price) || venue.price;
+  venue.description = prompt('Edit description:', venue.description) || venue.description;
+  
+  localStorage.setItem(OWNER_EMAIL, JSON.stringify(owner));
+  loadOwnerDashboard();
+}
+
+// to delete a venue (Owner)
+function deleteVenue(index) {
+  const owner = JSON.parse(localStorage.getItem(OWNER_EMAIL));
+  if (confirm('Delete this venue?')) {
+    owner.venues.splice(index, 1); // Remove the venue
+    localStorage.setItem(OWNER_EMAIL, JSON.stringify(owner));
+    loadOwnerDashboard();
+  }
+}
+
+// to load customer dashboard with their bookings (with Edit and Delete buttons)
+function loadCustomerDashboard() {
+  const user = JSON.parse(localStorage.getItem(localStorage.getItem('currentUser')));
+  const bookings = document.getElementById('bookingList');
+  if (user.bookings.length === 0) {
+    bookings.innerHTML = '<p>No bookings yet.</p>';
+    return;
+  }
+
+  bookings.innerHTML = user.bookings.map((b, index) => `
+    <div class="venue-card">
+      <strong>${b.venue}</strong><br>Date: ${b.date}<br>
+      <button onclick="editBooking(${index})">Reschedule</button>
+      <button onclick="deleteBooking(${index})">Cancel</button>
+    </div>
+  `).join('');
+}
+
+
+// to search venues based on location (Customer)
+function searchVenues() {
+  const query = document.getElementById('searchVenue').value.toLowerCase();
+  const owner = JSON.parse(localStorage.getItem(OWNER_EMAIL));
+  const results = owner.venues.filter(v => v.location.toLowerCase().includes(query));
+  
+  const venueList = document.getElementById('venueList');
+  
+  if (results.length > 0) {
+    // Display search results with a Book button
+    venueList.innerHTML = results.map(venue => `
+      <div class="venue-card">
+        <strong>${venue.name}</strong><br>Location: ${venue.location}<br>Price: ${venue.price}
+        <br><button onclick="bookVenue('${venue.name}')">Book</button>
+      </div>
+    `).join('');
+  } else {
+    venueList.innerHTML = 'No venues found.';
+  }
+}
+
+// to book a venue (Customer)
+function bookVenue(venueName) {
+  const email = localStorage.getItem('currentUser');
+  const user = JSON.parse(localStorage.getItem(email));
+  const date = prompt('Enter booking date (YYYY-MM-DD):');
+  
+  if (date) {
+    user.bookings.push({ venue: venueName, date });
+    localStorage.setItem(email, JSON.stringify(user));
+    alert('Booking successful.');
+    loadCustomerDashboard();
+  }
+}
+
+// to reschedule a booking (Customer)
+function editBooking(index) {
+  const email = localStorage.getItem('currentUser');
+  const user = JSON.parse(localStorage.getItem(email));
+
+  const newDate = prompt('Enter new booking date (YYYY-MM-DD):', user.bookings[index].date);
+  
+  if (newDate) {
+    user.bookings[index].date = newDate;
+    localStorage.setItem(email, JSON.stringify(user));
+    alert('Booking updated.');
+    loadCustomerDashboard();
+  }
+}
+
+// to delete/cancel a booking (Customer)
+function deleteBooking(index) {
+  const email = localStorage.getItem('currentUser');
+  const user = JSON.parse(localStorage.getItem(email));
+
+  if (confirm('Cancel this booking?')) {
+    user.bookings.splice(index, 1); // Remove the booking
+    localStorage.setItem(email, JSON.stringify(user));
+    alert('Booking cancelled.');
+    loadCustomerDashboard();
+  }
+}
+
+
+// check if user is already logged in
+window.onload = function() {
+  const currentUser = localStorage.getItem('currentUser');
+  if (currentUser) {
+    if (currentUser === OWNER_EMAIL) {
+      updateNav('Owner');
+      loadOwnerDashboard();
+      showPage('ownerDashboard');
+    } else {
+      const user = JSON.parse(localStorage.getItem(currentUser));
+      updateNav(user.name);
+      loadCustomerDashboard();
+      showPage('customerDashboard');
+    }
+  } else {
+    showPage('login');
+  }
+}
+</script>
+
+
+
+</body>
+</html>
