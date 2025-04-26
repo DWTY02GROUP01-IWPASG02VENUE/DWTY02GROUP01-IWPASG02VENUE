@@ -114,6 +114,19 @@ const INITIAL_VENUES = [
   { name: "Food Centre", location: "Bandar", price: 850, description: "Ideal for food fairs and culinary events." }
 ];
 
+// Always initialize Owner and Venues if not already in localStorage
+if (!localStorage.getItem(OWNER_EMAIL)) {
+  const ownerData = { 
+    name: 'Owner', 
+    email: OWNER_EMAIL, 
+    password: OWNER_PASSWORD, 
+    type: 'owner', 
+    venues: INITIAL_VENUES 
+  };
+  localStorage.setItem(OWNER_EMAIL, JSON.stringify(ownerData));
+}
+
+
 
 // to switch between different pages (login, register, dashboards)
 function showPage(pageId) {
